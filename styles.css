@@ -456,7 +456,9 @@ audio {
   flex: 0 1 auto;
   width: fit-content;
   max-width: min(100%, var(--reader-measure));
-  overflow-wrap: break-word;
+  white-space: nowrap;
+  overflow-wrap: normal;
+  word-break: normal;
   text-align: center;
 }
 

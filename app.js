@@ -57,6 +57,9 @@ const dom = {
 };
 
 let pageObserver;
+let lineFitFrame = 0;
+
+const MIN_FITTED_FONT_SIZE = 16;
 
 function escapeHtml(text) {
   return text
@@ -143,6 +146,8 @@ function applyReaderPreferences() {
   dom.fullscreenAssistToggle.classList.toggle("is-active", !state.larivaar);
   dom.fullscreenAssistToggle.setAttribute("aria-pressed", String(!state.larivaar));
   dom.viewModeLabel.textContent = state.larivaar ? "Larivaar view" : "Pad Ched view";
+
+  scheduleLineFit();
 }
 
 function syncSettingsPanel() {
@@ -234,6 +239,7 @@ function syncFullscreenState() {
   syncSettingsPanel();
   setupPageObserver();
   updateScrollProgress();
+  scheduleLineFit();
 }
 
 async function toggleReaderFullscreen() {
@@ -263,6 +269,50 @@ function buildPageOptions() {
 
 function getDisplayText(line) {
   return state.larivaar ? line.lareedar : line.punjabi;
+}
+
+function fitReaderLines() {
+  lineFitFrame = 0;
+
+  const lines = dom.reader.querySelectorAll(".reader-line");
+
+  lines.forEach((line) => {
+    line.style.fontSize = "";
+
+    const availableWidth = line.clientWidth;
+
+    if (!availableWidth || line.scrollWidth <= availableWidth + 1) {
+      return;
+    }
+
+    const baseFontSize = Number.parseFloat(window.getComputedStyle(line).fontSize);
+
+    if (!baseFontSize) {
+      return;
+    }
+
+    let nextFontSize = Math.max(
+      MIN_FITTED_FONT_SIZE,
+      Math.floor((baseFontSize * availableWidth * 100) / line.scrollWidth) / 100,
+    );
+
+    line.style.fontSize = `${nextFontSize}px`;
+
+    while (line.scrollWidth > availableWidth + 1 && nextFontSize > MIN_FITTED_FONT_SIZE) {
+      nextFontSize = Math.max(MIN_FITTED_FONT_SIZE, nextFontSize - 0.5);
+      line.style.fontSize = `${nextFontSize}px`;
+    }
+  });
+}
+
+function scheduleLineFit() {
+  if (lineFitFrame) {
+    cancelAnimationFrame(lineFitFrame);
+  }
+
+  lineFitFrame = requestAnimationFrame(() => {
+    fitReaderLines();
+  });
 }
 
 function lineMatches(line, query) {
@@ -338,6 +388,7 @@ function renderReader() {
 
   setupPageObserver();
   updateScrollProgress();
+  scheduleLineFit();
 }
 
 function setupPageObserver() {
@@ -494,6 +545,8 @@ function bindEvents() {
   });
 
   window.addEventListener("scroll", updateScrollProgress, { passive: true });
+  window.addEventListener("resize", scheduleLineFit, { passive: true });
+  window.addEventListener("orientationchange", scheduleLineFit, { passive: true });
   dom.reader.addEventListener("scroll", updateScrollProgress, { passive: true });
   document.addEventListener("fullscreenchange", syncFullscreenState);
   document.addEventListener("webkitfullscreenchange", syncFullscreenState);
