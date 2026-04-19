@@ -1,0 +1,220 @@
+<!DOCTYPE html>
+<html lang="pa">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Sukhmani Sahib Larivaar</title>
+    <meta
+      name="description"
+      content="Full Sukhmani Sahib in Punjabi larivaar with a dark, eye-comfort reading layout, audio, search, and reader controls."
+    />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Noto+Sans+Gurmukhi:wght@400;500;600;700&family=Sora:wght@400;500;600;700;800&display=swap"
+      rel="stylesheet"
+    />
+    <link rel="stylesheet" href="./styles.css" />
+    <script defer src="./data/sukhmani-data.js"></script>
+    <script defer src="./app.js"></script>
+  </head>
+  <body>
+    <div class="backdrop backdrop--left"></div>
+    <div class="backdrop backdrop--right"></div>
+    <div class="scroll-progress" aria-hidden="true">
+      <div id="scrollProgressBar" class="scroll-progress__bar"></div>
+    </div>
+
+    <div class="app-shell">
+      <header class="hero panel">
+        <div class="hero__copy">
+          <p class="eyebrow">Nitnem Reader</p>
+          <h1>Sukhmani Sahib</h1>
+          <p class="hero__lede">
+            Full Punjabi larivaar bani in a calm dark reading surface, prepared for long-form paath.
+          </p>
+          <div class="hero__stats">
+            <span id="statPages" class="stat-pill">82 pages</span>
+            <span id="statLines" class="stat-pill">2027 lines</span>
+            <span id="currentPagePill" class="stat-pill stat-pill--accent">Page 1</span>
+          </div>
+        </div>
+        <div class="hero__meta">
+          <p>Eye-saver theme</p>
+          <p>100vh layout</p>
+          <p>Larivaar by default</p>
+        </div>
+      </header>
+
+      <div class="layout">
+        <aside class="panel controls-panel">
+          <div class="panel-block">
+            <div class="section-heading">
+              <h2>Reader Controls</h2>
+              <p>Saved in this browser.</p>
+            </div>
+
+            <label class="field">
+              <span>Search Gurbani</span>
+              <input id="searchInput" type="search" placeholder="Search Punjabi text" autocomplete="off" />
+            </label>
+
+            <div class="button-row">
+              <button id="clearSearchButton" class="button button--ghost" type="button">Clear</button>
+              <button id="topButton" class="button button--ghost" type="button">Top</button>
+            </div>
+
+            <label class="field">
+              <span>Jump to page</span>
+              <select id="pageJump"></select>
+            </label>
+
+            <div class="toggle-grid">
+              <button id="modeToggle" class="toggle-button is-active" type="button" aria-pressed="true">
+                Larivaar
+              </button>
+              <button id="assistToggle" class="toggle-button" type="button" aria-pressed="false">
+                Pad Ched
+              </button>
+            </div>
+          </div>
+
+          <div class="panel-block">
+            <div class="section-heading">
+              <h2>Comfort</h2>
+              <p>Adjust type for your screen.</p>
+            </div>
+
+            <label class="field field--range">
+              <span>Font size <strong id="fontSizeValue">32px</strong></span>
+              <input id="fontSizeInput" type="range" min="24" max="50" step="1" value="32" />
+            </label>
+
+            <label class="field field--range">
+              <span>Line spacing <strong id="lineHeightValue">2.05</strong></span>
+              <input id="lineHeightInput" type="range" min="1.5" max="2.8" step="0.05" value="2.05" />
+            </label>
+
+            <label class="field field--range">
+              <span>Text width <strong id="measureValue">68ch</strong></span>
+              <input id="measureInput" type="range" min="52" max="90" step="1" value="68" />
+            </label>
+          </div>
+
+          <div class="panel-block">
+            <div class="section-heading">
+              <h2>Audio</h2>
+              <p>Streaming from SearchGurbani.</p>
+            </div>
+            <audio id="audioPlayer" controls preload="none"></audio>
+          </div>
+
+          <div class="panel-block panel-block--compact">
+            <p id="searchSummary" class="support-text">Type to highlight matching lines.</p>
+            <p id="dataSummary" class="support-text">Prepared locally for faster reading.</p>
+          </div>
+        </aside>
+
+        <main class="panel reader-panel">
+          <div class="reader-toolbar">
+            <div class="reader-toolbar__title">
+              <p class="eyebrow">Full Text</p>
+              <h2>Punjabi Gurbani</h2>
+            </div>
+            <div class="reader-toolbar__meta">
+              <button
+                id="settingsToggle"
+                class="button button--settings"
+                type="button"
+                aria-label="Open fullscreen settings"
+                aria-pressed="false"
+                title="Open fullscreen settings"
+              >
+                <svg class="button__icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+                  <path
+                    d="M10.2 2.4h3.6l.6 2.3c.6.2 1.2.5 1.8.8l2.2-1.1 2.5 2.5-1.1 2.2c.3.6.6 1.2.8 1.8l2.3.6v3.6l-2.3.6c-.2.6-.5 1.2-.8 1.8l1.1 2.2-2.5 2.5-2.2-1.1c-.6.3-1.2.6-1.8.8l-.6 2.3h-3.6l-.6-2.3c-.6-.2-1.2-.5-1.8-.8L5.3 21l-2.5-2.5 1.1-2.2c-.3-.6-.6-1.2-.8-1.8l-2.3-.6v-3.6l2.3-.6c.2-.6.5-1.2.8-1.8L2.8 6.9l2.5-2.5 2.2 1.1c.6-.3 1.2-.6 1.8-.8zM12 8.3A3.7 3.7 0 1 0 12 15.7 3.7 3.7 0 0 0 12 8.3z"
+                    fill="currentColor"
+                  ></path>
+                </svg>
+              </button>
+              <button id="fullscreenToggle" class="button button--fullscreen" type="button" aria-pressed="false">
+                Full Screen
+              </button>
+              <span id="viewModeLabel" class="stat-pill">Larivaar view</span>
+            </div>
+          </div>
+
+          <section id="fullscreenSettings" class="panel fullscreen-settings" hidden>
+            <div class="fullscreen-settings__grid">
+              <div class="panel-block">
+                <div class="section-heading">
+                  <h2>Reader Controls</h2>
+                  <p>Shown only when you open settings.</p>
+                </div>
+
+                <label class="field">
+                  <span>Search Gurbani</span>
+                  <input id="fullscreenSearchInput" type="search" placeholder="Search Punjabi text" autocomplete="off" />
+                </label>
+
+                <div class="button-row">
+                  <button id="fullscreenClearSearchButton" class="button button--ghost" type="button">Clear</button>
+                  <button id="fullscreenTopButton" class="button button--ghost" type="button">Top</button>
+                </div>
+
+                <label class="field">
+                  <span>Jump to page</span>
+                  <select id="fullscreenPageJump"></select>
+                </label>
+
+                <div class="toggle-grid">
+                  <button id="fullscreenModeToggle" class="toggle-button is-active" type="button" aria-pressed="true">
+                    Larivaar
+                  </button>
+                  <button id="fullscreenAssistToggle" class="toggle-button" type="button" aria-pressed="false">
+                    Pad Ched
+                  </button>
+                </div>
+              </div>
+
+              <div class="panel-block">
+                <div class="section-heading">
+                  <h2>Comfort</h2>
+                  <p>Same styling and colors in fullscreen.</p>
+                </div>
+
+                <label class="field field--range">
+                  <span>Font size <strong id="fullscreenFontSizeValue">32px</strong></span>
+                  <input id="fullscreenFontSizeInput" type="range" min="24" max="50" step="1" value="32" />
+                </label>
+
+                <label class="field field--range">
+                  <span>Line spacing <strong id="fullscreenLineHeightValue">2.05</strong></span>
+                  <input id="fullscreenLineHeightInput" type="range" min="1.5" max="2.8" step="0.05" value="2.05" />
+                </label>
+
+                <label class="field field--range">
+                  <span>Text width <strong id="fullscreenMeasureValue">68ch</strong></span>
+                  <input id="fullscreenMeasureInput" type="range" min="52" max="90" step="1" value="68" />
+                </label>
+              </div>
+
+              <div class="panel-block">
+                <div class="section-heading">
+                  <h2>Audio</h2>
+                  <p>Streaming from SearchGurbani.</p>
+                </div>
+                <audio id="fullscreenAudioPlayer" controls preload="none"></audio>
+              </div>
+            </div>
+          </section>
+
+          <div id="readerStatus" class="reader-status">Preparing the bani...</div>
+          <div id="reader" class="reader" aria-live="polite"></div>
+        </main>
+      </div>
+    </div>
+
+    <button id="backToTopButton" class="floating-button" type="button">Back to Top</button>
+  </body>
+</html>
