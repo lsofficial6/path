@@ -11,6 +11,8 @@ const state = {
   currentPage: 1,
   fullscreen: false,
   settingsOpen: false,
+  toolbarVisible: true,
+  toolbarScrollAnchor: 0,
 };
 
 const dom = {
@@ -58,8 +60,15 @@ const dom = {
 
 let pageObserver;
 let lineFitFrame = 0;
+let fullscreenScrollFrame = 0;
+let fullscreenTapStart = null;
 
 const MIN_FITTED_FONT_SIZE = 16;
+const FULLSCREEN_TOOLBAR_HIDE_DISTANCE = 24;
+const FULLSCREEN_TOOLBAR_SHOW_DISTANCE = 16;
+const FULLSCREEN_TOOLBAR_TOP_ZONE = 32;
+const FULLSCREEN_TAP_MAX_DISTANCE = 12;
+const FULLSCREEN_TAP_MAX_DURATION = 280;
 
 function escapeHtml(text) {
   return text
@@ -164,6 +173,27 @@ function syncSettingsPanel() {
     "title",
     showDrawer ? "Hide fullscreen settings" : "Open fullscreen settings",
   );
+
+  if (showDrawer) {
+    setFullscreenToolbarVisible(true);
+  }
+}
+
+function setFullscreenToolbarVisible(visible) {
+  const nextVisible = !state.fullscreen || visible;
+
+  state.toolbarVisible = nextVisible;
+  dom.readerPanel.classList.toggle("is-toolbar-hidden", state.fullscreen && !nextVisible);
+  state.toolbarScrollAnchor = state.fullscreen ? dom.reader.scrollTop : 0;
+}
+
+function closeFullscreenSettings() {
+  if (!state.settingsOpen) {
+    return;
+  }
+
+  state.settingsOpen = false;
+  syncSettingsPanel();
 }
 
 function setSearchValue(value) {
@@ -229,6 +259,11 @@ function syncFullscreenState() {
   if (!state.fullscreen) {
     state.settingsOpen = false;
   }
+  if (fullscreenScrollFrame) {
+    cancelAnimationFrame(fullscreenScrollFrame);
+    fullscreenScrollFrame = 0;
+  }
+  state.toolbarScrollAnchor = state.fullscreen ? dom.reader.scrollTop : 0;
   document.documentElement.classList.toggle("is-reader-fullscreen", state.fullscreen);
   dom.fullscreenToggle.textContent = state.fullscreen ? "Exit Full Screen" : "Full Screen";
   dom.fullscreenToggle.setAttribute("aria-pressed", String(state.fullscreen));
@@ -236,6 +271,7 @@ function syncFullscreenState() {
     "aria-label",
     state.fullscreen ? "Exit Gurbani full screen" : "Show Gurbani in full screen",
   );
+  setFullscreenToolbarVisible(true);
   syncSettingsPanel();
   setupPageObserver();
   updateScrollProgress();
@@ -458,6 +494,104 @@ function updateScrollProgress() {
   dom.scrollProgressBar.style.width = `${Math.min(progress, 100)}%`;
 }
 
+function syncFullscreenToolbarOnScroll() {
+  fullscreenScrollFrame = 0;
+  updateScrollProgress();
+
+  if (!state.fullscreen) {
+    return;
+  }
+
+  const currentScrollTop = dom.reader.scrollTop;
+
+  if (state.settingsOpen || currentScrollTop <= FULLSCREEN_TOOLBAR_TOP_ZONE) {
+    setFullscreenToolbarVisible(true);
+    return;
+  }
+
+  const travelSinceAnchor = currentScrollTop - state.toolbarScrollAnchor;
+
+  if (travelSinceAnchor >= FULLSCREEN_TOOLBAR_HIDE_DISTANCE) {
+    setFullscreenToolbarVisible(false);
+    return;
+  }
+
+  if (travelSinceAnchor <= -FULLSCREEN_TOOLBAR_SHOW_DISTANCE) {
+    setFullscreenToolbarVisible(true);
+  }
+}
+
+function handleReaderScroll() {
+  if (!state.fullscreen) {
+    updateScrollProgress();
+    return;
+  }
+
+  if (fullscreenScrollFrame) {
+    return;
+  }
+
+  fullscreenScrollFrame = requestAnimationFrame(() => {
+    syncFullscreenToolbarOnScroll();
+  });
+}
+
+function handleReaderPanelPointerDown(event) {
+  if (!state.fullscreen || !event.isPrimary) {
+    return;
+  }
+
+  fullscreenTapStart = {
+    id: event.pointerId,
+    x: event.clientX,
+    y: event.clientY,
+    time: event.timeStamp,
+  };
+}
+
+function handleReaderPanelPointerUp(event) {
+  if (!state.fullscreen || !event.isPrimary || !fullscreenTapStart) {
+    return;
+  }
+
+  const tapStart = fullscreenTapStart;
+  fullscreenTapStart = null;
+
+  if (tapStart.id !== event.pointerId) {
+    return;
+  }
+
+  const travelX = Math.abs(event.clientX - tapStart.x);
+  const travelY = Math.abs(event.clientY - tapStart.y);
+  const duration = event.timeStamp - tapStart.time;
+
+  if (
+    travelX > FULLSCREEN_TAP_MAX_DISTANCE
+    || travelY > FULLSCREEN_TAP_MAX_DISTANCE
+    || duration > FULLSCREEN_TAP_MAX_DURATION
+  ) {
+    return;
+  }
+
+  if (!(event.target instanceof Element)) {
+    setFullscreenToolbarVisible(true);
+    return;
+  }
+
+  const insideSettings = dom.fullscreenSettings.contains(event.target);
+  const onSettingsToggle = dom.settingsToggle.contains(event.target);
+
+  if (state.settingsOpen && !insideSettings && !onSettingsToggle) {
+    closeFullscreenSettings();
+  }
+
+  setFullscreenToolbarVisible(true);
+}
+
+function clearFullscreenTapStart() {
+  fullscreenTapStart = null;
+}
+
 function bindEvents() {
   dom.searchInput.addEventListener("input", (event) => {
     setSearchValue(event.target.value);
@@ -547,7 +681,10 @@ function bindEvents() {
   window.addEventListener("scroll", updateScrollProgress, { passive: true });
   window.addEventListener("resize", scheduleLineFit, { passive: true });
   window.addEventListener("orientationchange", scheduleLineFit, { passive: true });
-  dom.reader.addEventListener("scroll", updateScrollProgress, { passive: true });
+  dom.reader.addEventListener("scroll", handleReaderScroll, { passive: true });
+  dom.readerPanel.addEventListener("pointerdown", handleReaderPanelPointerDown, { passive: true });
+  dom.readerPanel.addEventListener("pointerup", handleReaderPanelPointerUp, { passive: true });
+  dom.readerPanel.addEventListener("pointercancel", clearFullscreenTapStart, { passive: true });
   document.addEventListener("fullscreenchange", syncFullscreenState);
   document.addEventListener("webkitfullscreenchange", syncFullscreenState);
 }
